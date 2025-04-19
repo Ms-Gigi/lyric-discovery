@@ -1,32 +1,30 @@
 import sys
 import os
+import random
 
 # Add the 'src' folder to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import random
-from lyric_finder.scraper import search_lyrics_snippet, get_full_lyrics
+from lyric_finder.genius_scraper import search_genius_direct, scrape_genius_lyrics
 
 def play_guess_the_song(snippet):
     print("\n🎲 Welcome to Guess the Song!")
 
-    # Get results for the lyric snippet
-    results = search_lyrics_snippet(snippet)
-    if not results:
-        print("😔 No results found.")
+    # Search Genius for a matching song
+    genius_url = search_genius_direct(snippet)
+    if not genius_url:
+        print("😔 No matching Genius song found.")
         return
 
-    # Randomly select one song from results
-    song = random.choice(results)
-    print(f"\n🔍 Fetching lyrics for one of the matches...")
+    # print(f"\n🔍 Fetching lyrics from Genius: {genius_url}")
+    song = scrape_genius_lyrics(genius_url)
 
-    lyrics = get_full_lyrics(song["link"])
-    if not lyrics:
+    if not song or not song['lyrics']:
         print("Could not fetch lyrics.")
         return
 
     # Split lyrics into lines
-    lines = lyrics.split('\n')
+    lines = song['lyrics'].split('\n')
     lines = [line.strip() for line in lines if line.strip()]  # remove empty ones
 
     if len(lines) < 3:
@@ -51,13 +49,11 @@ def play_guess_the_song(snippet):
     else:
         print("❌ Oof! The correct answer was:")
         print(f"• {song['title']} by {song['artist']}")
-        print(f"🔗 {song['link']}")
+        print(f"🔗 {song['url']}")
 
     again = input("\n🔁 Play again? (y/n): ").lower()
     if again == 'y':
         play_guess_the_song(snippet)
-
-from lyric_finder.guess_game import play_guess_the_song
 
 if __name__ == "__main__":
     snippet = input("Enter a keyword to pull lyrics from: ")

@@ -1,9 +1,15 @@
+# Legacy scraper using Lyrics.com (replaced by Genius)
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 import time
+
+
 
 def search_lyrics_snippet(snippet, driver_path='C:/Users/adebu/PycharmProjects/lyric-discovery/chromedriver-win64/chromedriver.exe'):
     """
@@ -19,28 +25,43 @@ def search_lyrics_snippet(snippet, driver_path='C:/Users/adebu/PycharmProjects/l
     try:
         # Format search URL
         query = snippet.replace(' ', '+')
-        url = f"https://www.lyrics.com/serp.php?st={query}&qtype=2"
+        url = f"https://www.lyrics.com/lyrics/{query}"
 
         # Open the search page
         driver.get(url)
-        time.sleep(2)  # Wait for content to load
+
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "tal"))
+            )
+        except:
+            print("⏳ Timed out waiting for results to load.")
 
         # Parse the HTML using BeautifulSoup
         soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-        # Find all search results
-        results = soup.find_all('td', class_='tal qx')
+        print(f"🔍 Searching for: {snippet}")
+        print(f"📎 URL: {url}")
+
+        results = soup.find_all("div", class_="sec-lyric clearfix")
+        print(f"🔢 Found {len(results)} results from Lyrics.com")
 
         matches = []
         for result in results:
-            title_tag = result.find('strong')
-            artist_tag = result.find('a')
-            link_tag = result.find('a')
+            h3_tag = result.find("h3")
+            title_tag = h3_tag.find("a") if h3_tag else None
 
-            if title_tag and artist_tag and link_tag:
+            artist_info = result.find("div", class_="tal qx")
+            artist_tag = artist_info.find("a") if artist_info else None
+
+            print("✅ Debug Result Block:")
+            print("   title_tag:", title_tag)
+            print("   artist_tag:", artist_tag)
+
+            if title_tag:
                 title = title_tag.text.strip()
-                artist = artist_tag.text.strip()
-                link = "https://www.lyrics.com" + link_tag['href']
+                artist = artist_tag.text.strip() if artist_tag else "Unknown"
+                link = "https://www.lyrics.com" + title_tag['href']
 
                 matches.append({
                     "title": title,
